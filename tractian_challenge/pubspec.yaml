@@ -49,6 +49,14 @@ flutter:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
+  assets:
+    - assets/data/apex_unit/assets.json
+    - assets/data/apex_unit/locations.json
+    - assets/data/jaguar_unit/assets.json
+    - assets/data/jaguar_unit/locations.json
+    - assets/data/tobias_unit/assets.json
+    - assets/data/tobias_unit/locations.json
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 
