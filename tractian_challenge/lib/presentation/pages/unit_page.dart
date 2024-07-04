@@ -1,22 +1,24 @@
+// lib/presentation/pages/unit_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tractian_challenge/presentation/widgets/collapsible_widget.dart';
 import 'package:tractian_challenge/presentation/widgets/tree_search_bar.dart';
 import 'package:tractian_challenge/presentation/widgets/filter_buttons.dart';
-import 'package:tractian_challenge/data/models/location.dart';
-import 'package:tractian_challenge/data/models/asset.dart';
 import 'package:tractian_challenge/themes/app_colors.dart';
 import 'package:tractian_challenge/providers.dart';
 
+import '../../data/models/node.dart';
+
 class UnitPage extends ConsumerStatefulWidget {
   final String unitName;
-  final List<Location> locations;
   final String assetFilePath;
+  final String locationFilePath;
 
   UnitPage({
     required this.unitName,
-    required this.locations,
     required this.assetFilePath,
+    required this.locationFilePath,
   });
 
   @override
@@ -24,9 +26,8 @@ class UnitPage extends ConsumerStatefulWidget {
 }
 
 class _UnitPageState extends ConsumerState<UnitPage> {
-  late List<Asset> _allAssets;
-  late List<Asset> _filteredAssets;
-  late Map<String, List<Asset>> _assetsByParentId;
+  late Map<String, Node> _nodes;
+  late List<Node> _rootNodes;
 
   @override
   void dispose() {
@@ -48,170 +49,153 @@ class _UnitPageState extends ConsumerState<UnitPage> {
           final isCriticalStatusActive = ref.watch(criticalStatusFilterProvider);
           final searchQuery = ref.watch(searchQueryProvider);
           final assetsAsyncValue = ref.watch(assetsProvider(widget.assetFilePath));
+          final locationsAsyncValue = ref.watch(locationsProvider(widget.locationFilePath));
 
-          assetsAsyncValue.when(
+          return assetsAsyncValue.when(
             data: (assets) {
-              _allAssets = assets;
-              _filteredAssets = _applyFilters(ref, assets, isEnergySensorActive, isCriticalStatusActive, searchQuery);
-              _assetsByParentId = _buildAssetsByParentId(_filteredAssets);
-            },
-            loading: () {},
-            error: (error, stack) {
-              return Center(child: Text('Error: $error'));
-            },
-          );
+              return locationsAsyncValue.when(
+                data: (locations) {
+                  _nodes = buildNodeTree(locations, assets);
+                  _rootNodes = _nodes.values.where((node) => node.parentId == null).toList();
 
-          return Column(
-            children: [
-              TreeSearchBar(
-                onSearch: (text) {
-                  ref.read(searchQueryProvider.notifier).state = text;
+                  _applyFilters(isEnergySensorActive, isCriticalStatusActive, searchQuery);
+
+                  return Column(
+                    children: [
+                      TreeSearchBar(
+                        onSearch: (text) {
+                          ref.read(searchQueryProvider.notifier).state = text;
+                          _applyFilters(isEnergySensorActive, isCriticalStatusActive, text);
+                          setState(() {}); // Rebuild the widget tree
+                        },
+                      ),
+                      FilterButtons(
+                        isEnergySensorActive: isEnergySensorActive,
+                        isCriticalStatusActive: isCriticalStatusActive,
+                        onEnergySensorFilter: () {
+                          ref.read(energySensorFilterProvider.notifier).state = !isEnergySensorActive;
+                          _applyFilters(!isEnergySensorActive, isCriticalStatusActive, searchQuery);
+                          setState(() {}); // Rebuild the widget tree
+                        },
+                        onCriticalStatusFilter: () {
+                          ref.read(criticalStatusFilterProvider.notifier).state = !isCriticalStatusActive;
+                          _applyFilters(isEnergySensorActive, !isCriticalStatusActive, searchQuery);
+                          setState(() {}); // Rebuild the widget tree
+                        },
+                      ),
+                      Expanded(
+                        child: ListView(
+                          children: _rootNodes.expand(buildTreeView).toList(),
+                        ),
+                      ),
+                    ],
+                  );
                 },
-              ),
-              FilterButtons(
-                isEnergySensorActive: isEnergySensorActive,
-                isCriticalStatusActive: isCriticalStatusActive,
-                onEnergySensorFilter: () {
-                  ref.read(energySensorFilterProvider.notifier).state = !isEnergySensorActive;
-                },
-                onCriticalStatusFilter: () {
-                  ref.read(criticalStatusFilterProvider.notifier).state = !isCriticalStatusActive;
-                },
-              ),
-              Expanded(
-                child: assetsAsyncValue.when(
-                  data: (assets) {
-                    final assetsToDisplay = _filteredAssets;
-                    return ListView(
-                      children: _buildCollapsibleWidgets(ref, widget.locations, _assetsByParentId, isEnergySensorActive || isCriticalStatusActive || searchQuery.isNotEmpty),
-                    );
-                  },
-                  loading: () => Center(child: CircularProgressIndicator()),
-                  error: (error, stack) => Center(child: Text('Error: $error')),
-                ),
-              ),
-            ],
+                loading: () => Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text('Error: $error')),
+              );
+            },
+            loading: () => Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(child: Text('Error: $error')),
           );
         },
       ),
     );
   }
 
-  List<Asset> _applyFilters(WidgetRef ref, List<Asset> assets, bool isEnergySensorActive, bool isCriticalStatusActive, String searchQuery) {
-    List<Asset> filtered = assets;
+  Map<String, Node> buildNodeTree(List<Node> locations, List<Node> assets) {
+    final Map<String, Node> nodes = {};
 
-    if (isEnergySensorActive) {
-      filtered = filtered.where((asset) => asset.sensorType == 'energy').toList();
+    for (var node in locations) {
+      nodes[node.id] = Node(
+        id: node.id,
+        name: node.name,
+        parentId: node.parentId,
+        locationId: null,
+        sensorType: null,
+        status: null,
+        children: [],
+      );
     }
 
-    if (isCriticalStatusActive) {
-      filtered = filtered.where((asset) => asset.status == 'alert').toList();
+    for (var node in assets) {
+      nodes[node.id] = Node(
+        id: node.id,
+        name: node.name,
+        parentId: node.parentId,
+        locationId: node.locationId,
+        sensorType: node.sensorType,
+        status: node.status,
+        children: [],
+      );
     }
 
-    if (searchQuery.isNotEmpty) {
-      filtered = filtered
-          .where((asset) => asset.name.toLowerCase().contains(searchQuery.toLowerCase()))
-          .toList();
-    }
+    nodes.values.forEach((node) {
+      final parentId = node.parentId ?? node.locationId;
+      if (parentId != null && nodes.containsKey(parentId)) {
+        nodes[parentId]!.children.add(node);
+      }
+    });
 
-    if (filtered.isEmpty && searchQuery.isNotEmpty) {
-      return [];
-    }
-
-    return _retainRelevantAssetPaths(ref, assets, filtered);
+    return nodes;
   }
 
-  List<Asset> _retainRelevantAssetPaths(WidgetRef ref, List<Asset> allAssets, List<Asset> filteredAssets) {
-    if (filteredAssets.isEmpty) {
-      return [];
-    }
+  void _applyFilters(bool isEnergySensorActive, bool isCriticalStatusActive, String searchQuery) {
+    _rootNodes.forEach((node) {
+      updateRenderStatus(node, isEnergySensorActive, isCriticalStatusActive, searchQuery);
+    });
+  }
 
-    final Set<String> relevantAssetIds = {};
-    final Map<String, List<Asset>> assetsByParentId = _buildAssetsByParentId(allAssets);
+  void updateRenderStatus(Node node, bool isEnergySensorActive, bool isCriticalStatusActive, String query) {
+    node.shouldRender = applyAllFilters(node, isEnergySensorActive, isCriticalStatusActive, query);
+    print('Node: ${node.name}, shouldRender: ${node.shouldRender}');
 
-    void collectRelevantAssets(Asset asset) {
-      relevantAssetIds.add(asset.id);
-      final children = assetsByParentId[asset.id] ?? [];
-      for (final child in children) {
-        if (filteredAssets.contains(child)) {
-          relevantAssetIds.add(child.id);
-        } else {
-          collectRelevantAssets(child);
-        }
+    for (var child in node.children) {
+      updateRenderStatus(child, isEnergySensorActive, isCriticalStatusActive, query);
+      if (child.shouldRender) {
+        node.shouldRender = true;
       }
     }
 
-    for (final asset in filteredAssets) {
-      relevantAssetIds.add(asset.id);
-      String? parentId = asset.parentId;
-      while (parentId != null && parentId.isNotEmpty) {
-        relevantAssetIds.add(parentId);
-        final parent = allAssets.firstWhere((a) => a.id == parentId, orElse: () => Asset(id: '', name: '', locationId: null));
-        if (parent.id.isNotEmpty) {
-          parentId = parent.parentId;
-        } else {
-          break;
-        }
-      }
-      collectRelevantAssets(asset);
-    }
-
-    return allAssets.where((asset) => relevantAssetIds.contains(asset.id)).toList();
+    node.propagateRenderStatus();
   }
 
-  Map<String, List<Asset>> _buildAssetsByParentId(List<Asset> assets) {
-    final Map<String, List<Asset>> assetsByParentId = {};
-    for (var asset in assets) {
-      assetsByParentId.putIfAbsent(asset.parentId ?? '', () => []).add(asset);
-    }
-    return assetsByParentId;
+  bool applyAllFilters(Node node, bool isEnergySensorActive, bool isCriticalStatusActive, String query) {
+    return searchQueryFilter(node, query) &&
+        (!isEnergySensorActive || energySensorFilter(node)) &&
+        (!isCriticalStatusActive || criticalStatusFilter(node));
   }
 
-  List<Widget> _buildCollapsibleWidgets(WidgetRef ref, List<Location> locations, Map<String, List<Asset>> assetsByParentId, bool filterActive) {
-    return locations.map((location) {
-      final locationAssets = assetsByParentId['']?.where((asset) => asset.locationId == location.id).toList() ?? [];
-      return locationAssets.isNotEmpty || !filterActive
-          ? CollapsibleWidget(
-        title: location.name,
-        iconPath: 'assets/images/icons/location.png',
-        isExpanded: filterActive,
-        disableCollapse: filterActive,
-        children: _buildAssetWidgets(ref, locationAssets, assetsByParentId, filterActive),
+  bool energySensorFilter(Node node) {
+    bool shouldRender = node.sensorType == 'energy';
+    print('energySensorFilter called for node with id: ${node.id}, sensorType: ${node.sensorType}, shouldRender: $shouldRender');
+    return shouldRender;
+  }
+
+  bool criticalStatusFilter(Node node) {
+    bool shouldRender = node.status == 'alert';
+    print('criticalStatusFilter called for node with id: ${node.id}, status: ${node.status}, shouldRender: $shouldRender');
+    return shouldRender;
+  }
+
+  bool searchQueryFilter(Node node, String query) {
+    bool shouldRender = node.name.toLowerCase().contains(query.toLowerCase());
+    print('searchQueryFilter called for node with id: ${node.id}, name: ${node.name}, query: $query, shouldRender: $shouldRender');
+    return shouldRender;
+  }
+
+  List<Widget> buildTreeView(Node node) {
+    if (!node.shouldRender) return [];
+
+    return [
+      CollapsibleWidget(
+        title: node.name,
+        iconPath: node.sensorType != null ? 'assets/images/icons/component.png' : 'assets/images/icons/location.png',
+        status: node.status,
+        isExpanded: true,
+        disableCollapse: false,
+        children: node.children.where((child) => child.shouldRender).expand(buildTreeView).toList(),
       )
-          : Container();
-    }).toList();
-  }
-
-  List<Widget> _buildAssetWidgets(WidgetRef ref, List<Asset> assets, Map<String, List<Asset>> assetsByParentId, bool filterActive) {
-    return assets.map((asset) {
-      final assetComponents = assetsByParentId[asset.id] ?? [];
-      return assetComponents.isNotEmpty || assetMatchesFilter(ref, asset, filterActive) || !filterActive
-          ? CollapsibleWidget(
-        title: asset.name,
-        iconPath: asset.status != null ? 'assets/images/icons/component.png' : 'assets/images/icons/asset.png',
-        status: asset.status,
-        isExpanded: filterActive,
-        disableCollapse: filterActive,
-        children: _buildAssetWidgets(ref, assetComponents, assetsByParentId, filterActive),
-      )
-          : Container();
-    }).toList();
-  }
-
-  bool assetMatchesFilter(WidgetRef ref, Asset asset, bool filterActive) {
-    final searchQuery = ref.read(searchQueryProvider);
-    if (filterActive && asset.sensorType == 'energy') {
-      return true;
-    }
-
-    if (filterActive && asset.status == 'alert') {
-      return true;
-    }
-
-    if (filterActive && searchQuery.isNotEmpty && asset.name.toLowerCase().contains(searchQuery.toLowerCase())) {
-      return true;
-    }
-
-    return false;
+    ];
   }
 }

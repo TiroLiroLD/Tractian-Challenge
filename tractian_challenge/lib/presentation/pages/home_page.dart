@@ -1,9 +1,13 @@
+// lib/presentation/pages/home_page.dart
+
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:tractian_challenge/data/services/data_service.dart';
 import 'package:tractian_challenge/presentation/pages/unit_page.dart';
 import 'package:tractian_challenge/themes/app_colors.dart';
-import 'package:tractian_challenge/data/models/location.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -12,12 +16,33 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final DataService _dataService = DataService();
-  late Future<List<Map<String, dynamic>>> _unitsFuture;
+  late Future<List<Map<String, String>>> _unitsFuture;
 
   @override
   void initState() {
     super.initState();
-    _unitsFuture = _dataService.fetchUnits();
+    _unitsFuture = fetchUnitConfigs();
+  }
+
+  Future<List<Map<String, String>>> fetchUnitConfigs() async {
+    final String configResponse = await rootBundle.loadString('assets/data/units_config.json');
+    final List<dynamic> unitDirectories = json.decode(configResponse)['units'];
+
+    final List<Map<String, String>> units = unitDirectories.map<Map<String, String>>((dir) {
+      final String unitName = _getUnitNameFromDirectory(dir);
+      return {
+        'name': unitName,
+        'locationFilePath': 'assets/data/$dir/locations.json',
+        'assetFilePath': 'assets/data/$dir/assets.json',
+      };
+    }).toList();
+
+    return units;
+  }
+
+  String _getUnitNameFromDirectory(String dir) {
+    final name = dir.replaceAll('_unit', '').replaceAll('_', ' ');
+    return '${name[0].toUpperCase()}${name.substring(1)} Unit';
   }
 
   @override
@@ -35,7 +60,7 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: FutureBuilder<List<Map<String, dynamic>>>(
+        child: FutureBuilder<List<Map<String, String>>>(
           future: _unitsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -52,9 +77,9 @@ class _HomePageState extends State<HomePage> {
                     padding: const EdgeInsets.only(bottom: 16.0),
                     child: _buildUnitButton(
                       context,
-                      unit['name'],
-                      unit['locations'],
-                      'assets/data/${unit['dir']}/assets.json',
+                      unit['name']!,
+                      unit['locationFilePath']!,
+                      unit['assetFilePath']!,
                     ),
                   );
                 }).toList(),
@@ -66,8 +91,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildUnitButton(
-      BuildContext context, String unitName, List<Location> locations, String assetFilePath) {
+  Widget _buildUnitButton(BuildContext context, String unitName, String locationFilePath, String assetFilePath) {
     return Container(
       width: 317,
       height: 76,
@@ -85,7 +109,7 @@ class _HomePageState extends State<HomePage> {
             MaterialPageRoute(
               builder: (context) => UnitPage(
                 unitName: unitName,
-                locations: locations,
+                locationFilePath: locationFilePath,
                 assetFilePath: assetFilePath,
               ),
             ),

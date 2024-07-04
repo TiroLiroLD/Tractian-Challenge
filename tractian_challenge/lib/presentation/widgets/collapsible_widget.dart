@@ -1,21 +1,22 @@
+// lib/presentation/widgets/collapsible_widget.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 class CollapsibleWidget extends StatefulWidget {
   final String title;
   final String iconPath;
-  final List<Widget> children;
-  final bool isExpanded;
   final String? status;
+  final bool isExpanded;
   final bool disableCollapse;
+  final List<Widget> children;
 
   CollapsibleWidget({
     required this.title,
     required this.iconPath,
-    required this.children,
-    this.isExpanded = false,
     this.status,
+    this.isExpanded = false,
     this.disableCollapse = false,
+    required this.children,
   });
 
   @override
@@ -24,42 +25,24 @@ class CollapsibleWidget extends StatefulWidget {
 
 class _CollapsibleWidgetState extends State<CollapsibleWidget> with SingleTickerProviderStateMixin {
   late bool _isExpanded;
-  late final ScrollController _scrollController;
-  late Ticker _ticker;
-  bool _scrollingForward = true;
-  int _pauseCounter = 0;
+  late AnimationController _controller;
+  late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
     _isExpanded = widget.isExpanded;
-    _scrollController = ScrollController();
-
-    _ticker = createTicker((elapsed) {
-      const int pauseDuration = 100; // Number of ticks to pause at the end
-      const double scrollSpeed = 0.5; // Scroll speed
-
-      if (_scrollingForward) {
-        if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent) {
-          _pauseCounter++;
-          if (_pauseCounter >= pauseDuration) {
-            _scrollingForward = false;
-            _pauseCounter = 0;
-            _scrollController.jumpTo(_scrollController.position.minScrollExtent);
-          }
-        } else {
-          _scrollController.jumpTo(_scrollController.position.pixels + scrollSpeed);
-        }
-      } else {
-        _pauseCounter++;
-        if (_pauseCounter >= pauseDuration) {
-          _scrollingForward = true;
-          _pauseCounter = 0;
-        }
-      }
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) => _ticker.start());
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+    if (_isExpanded) {
+      _controller.forward();
+    }
   }
 
   @override
@@ -69,13 +52,17 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> with SingleTicker
       setState(() {
         _isExpanded = widget.isExpanded;
       });
+      if (_isExpanded) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
     }
   }
 
   @override
   void dispose() {
-    _ticker.dispose();
-    _scrollController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -97,6 +84,11 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> with SingleTicker
                   setState(() {
                     _isExpanded = !_isExpanded;
                   });
+                  if (_isExpanded) {
+                    _controller.forward();
+                  } else {
+                    _controller.reverse();
+                  }
                 },
               ),
             if (widget.children.isEmpty)
@@ -111,62 +103,36 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> with SingleTicker
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                controller: _scrollController,
-                child: Row(
-                  children: [
-                    Text(
-                      widget.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (widget.status != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: Icon(
-                          widget.status == 'alert'
-                              ? Icons.circle
-                              : Icons.bolt_rounded,
-                          color: widget.status == 'alert'
-                              ? Colors.red
-                              : Colors.green,
-                          size: widget.status == 'alert' ? 12 : null,
-                        ),
-                      ),
-                  ],
+              child: Text(
+                widget.title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
+            if (widget.status != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: Icon(
+                  widget.status == 'alert'
+                      ? Icons.circle
+                      : Icons.bolt_rounded,
+                  color: widget.status == 'alert'
+                      ? Colors.red
+                      : Colors.green,
+                  size: widget.status == 'alert' ? 12 : null,
+                ),
+              ),
           ],
         ),
-        if (_isExpanded && widget.children.isNotEmpty)
-          Stack(
-            children: [
-              Positioned(
-                left: 24,
-                top: 0,
-                bottom: 0,
-                child: Container(
-                  width: 2,
-                  color: Colors.grey,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 48),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: widget.children.length,
-                  itemBuilder: (context, index) {
-                    return widget.children[index];
-                  },
-                ),
-              ),
-            ],
+        SizeTransition(
+          sizeFactor: _animation,
+          axisAlignment: -1.0,
+          child: Column(
+            children: widget.children,
           ),
+        ),
       ],
     );
   }
