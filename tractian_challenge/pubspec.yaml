@@ -52,6 +52,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
 
   assets:
+    - assets/data/
     - assets/data/apex_unit/
     - assets/data/jaguar_unit/
     - assets/data/tobias_unit/
