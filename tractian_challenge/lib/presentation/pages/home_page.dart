@@ -3,7 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:tractian_challenge/data/services/data_service.dart';
 import 'package:tractian_challenge/presentation/pages/unit_page.dart';
 import 'package:tractian_challenge/themes/app_colors.dart';
-import 'package:tractian_challenge/data/models/asset.dart';
 import 'package:tractian_challenge/data/models/location.dart';
 
 class HomePage extends StatefulWidget {
@@ -55,7 +54,7 @@ class _HomePageState extends State<HomePage> {
                       context,
                       unit['name'],
                       unit['locations'],
-                      unit['assets'],
+                      'assets/data/${unit['dir']}/assets.json',
                     ),
                   );
                 }).toList(),
@@ -68,7 +67,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildUnitButton(
-      BuildContext context, String unitName, List<Location> locations, List<Asset> assets) {
+      BuildContext context, String unitName, List<Location> locations, String assetFilePath) {
     return Container(
       width: 317,
       height: 76,
@@ -87,7 +86,7 @@ class _HomePageState extends State<HomePage> {
               builder: (context) => UnitPage(
                 unitName: unitName,
                 locations: locations,
-                assets: assets,
+                assetFilePath: assetFilePath,
               ),
             ),
           );
