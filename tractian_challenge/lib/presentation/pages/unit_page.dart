@@ -8,7 +8,7 @@ import 'package:tractian_challenge/data/models/asset.dart';
 import 'package:tractian_challenge/themes/app_colors.dart';
 import 'package:tractian_challenge/providers.dart';
 
-class UnitPage extends StatefulWidget {
+class UnitPage extends ConsumerStatefulWidget {
   final String unitName;
   final List<Location> locations;
   final String assetFilePath;
@@ -23,10 +23,18 @@ class UnitPage extends StatefulWidget {
   _UnitPageState createState() => _UnitPageState();
 }
 
-class _UnitPageState extends State<UnitPage> {
+class _UnitPageState extends ConsumerState<UnitPage> {
   late List<Asset> _allAssets;
   late List<Asset> _filteredAssets;
   late Map<String, List<Asset>> _assetsByParentId;
+
+  @override
+  void dispose() {
+    ref.read(energySensorFilterProvider.notifier).state = false;
+    ref.read(criticalStatusFilterProvider.notifier).state = false;
+    ref.read(searchQueryProvider.notifier).state = '';
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
