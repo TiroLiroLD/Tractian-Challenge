@@ -4,12 +4,16 @@ class CollapsibleWidget extends StatefulWidget {
   final String title;
   final IconData icon;
   final List<Widget> children;
-  final String? status; // Add status to determine icon color
+  final bool isExpanded;
+  final bool disableCollapse;
+  final String? status;
 
   CollapsibleWidget({
     required this.title,
     required this.icon,
     required this.children,
+    this.isExpanded = false,
+    this.disableCollapse = false,
     this.status,
   });
 
@@ -18,22 +22,26 @@ class CollapsibleWidget extends StatefulWidget {
 }
 
 class _CollapsibleWidgetState extends State<CollapsibleWidget> {
-  bool _isExpanded = false;
+  late bool _isExpanded;
 
-  Color? _getStatusColor(String? status) {
-    if (status == 'alert') {
-      return Colors.red;
-    } else if (status == 'operating') {
-      return Colors.green;
-    } else {
-      return null; // No color for undefined status
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.isExpanded;
+  }
+
+  @override
+  void didUpdateWidget(CollapsibleWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isExpanded != widget.isExpanded) {
+      setState(() {
+        _isExpanded = widget.isExpanded;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    Color? statusColor = _getStatusColor(widget.status);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -44,15 +52,17 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> {
                 icon: Icon(
                   _isExpanded ? Icons.expand_less : Icons.expand_more,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _isExpanded = !_isExpanded;
-                  });
-                },
+                onPressed: widget.disableCollapse
+                    ? null
+                    : () {
+                        setState(() {
+                          _isExpanded = !_isExpanded;
+                        });
+                      },
               ),
             if (widget.children.isEmpty)
-              SizedBox(
-                width: 48, // To maintain alignment with other rows
+              const SizedBox(
+                width: 48,
               ),
             Icon(widget.icon),
             const SizedBox(width: 8),
@@ -61,18 +71,22 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> {
                 children: [
                   Text(
                     widget.title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  if (statusColor != null)
+                  if (widget.status != null)
                     Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: statusColor,
-                          shape: BoxShape.circle,
-                        ),
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Icon(
+                        widget.status == 'alert'
+                            ? Icons.circle
+                            : Icons.bolt_rounded,
+                        color: widget.status == 'alert'
+                            ? Colors.red
+                            : Colors.green,
+                        size: 12, // Make the icon smaller
                       ),
                     ),
                 ],
@@ -96,7 +110,7 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> {
                 padding: const EdgeInsets.only(left: 48),
                 child: ListView.builder(
                   shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: widget.children.length,
                   itemBuilder: (context, index) {
                     return widget.children[index];

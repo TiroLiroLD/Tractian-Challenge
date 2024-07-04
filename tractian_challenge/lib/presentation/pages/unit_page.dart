@@ -44,8 +44,8 @@ class _UnitPageState extends State<UnitPage> {
           assetsAsyncValue.when(
             data: (assets) {
               _allAssets = assets;
-              _filteredAssets = _applyFilters(assets, isEnergySensorActive, isCriticalStatusActive, searchQuery);
-              _assetsByParentId = _buildAssetsByParentId(isEnergySensorActive || isCriticalStatusActive || searchQuery.isNotEmpty ? _filteredAssets : _allAssets);
+              _filteredAssets = _applyFilters(ref, assets, isEnergySensorActive, isCriticalStatusActive, searchQuery);
+              _assetsByParentId = _buildAssetsByParentId(_filteredAssets);
             },
             loading: () {},
             error: (error, stack) {
@@ -73,10 +73,9 @@ class _UnitPageState extends State<UnitPage> {
               Expanded(
                 child: assetsAsyncValue.when(
                   data: (assets) {
-                    final assetsToDisplay = isEnergySensorActive || isCriticalStatusActive || searchQuery.isNotEmpty ? _filteredAssets : _allAssets;
-                    final _assetsByParentId = _buildAssetsByParentId(assetsToDisplay);
+                    final assetsToDisplay = _filteredAssets;
                     return ListView(
-                      children: _buildCollapsibleWidgets(widget.locations, _assetsByParentId, isEnergySensorActive, isCriticalStatusActive, searchQuery),
+                      children: _buildCollapsibleWidgets(ref, widget.locations, _assetsByParentId, isEnergySensorActive || isCriticalStatusActive || searchQuery.isNotEmpty),
                     );
                   },
                   loading: () => Center(child: CircularProgressIndicator()),
@@ -90,7 +89,7 @@ class _UnitPageState extends State<UnitPage> {
     );
   }
 
-  List<Asset> _applyFilters(List<Asset> assets, bool isEnergySensorActive, bool isCriticalStatusActive, String searchQuery) {
+  List<Asset> _applyFilters(WidgetRef ref, List<Asset> assets, bool isEnergySensorActive, bool isCriticalStatusActive, String searchQuery) {
     List<Asset> filtered = assets;
 
     if (isEnergySensorActive) {
@@ -107,10 +106,10 @@ class _UnitPageState extends State<UnitPage> {
           .toList();
     }
 
-    return _retainRelevantAssetPaths(assets, filtered);
+    return _retainRelevantAssetPaths(ref, assets, filtered);
   }
 
-  List<Asset> _retainRelevantAssetPaths(List<Asset> allAssets, List<Asset> filteredAssets) {
+  List<Asset> _retainRelevantAssetPaths(WidgetRef ref, List<Asset> allAssets, List<Asset> filteredAssets) {
     if (filteredAssets.isEmpty) {
       return allAssets;
     }
@@ -156,43 +155,48 @@ class _UnitPageState extends State<UnitPage> {
     return assetsByParentId;
   }
 
-  List<Widget> _buildCollapsibleWidgets(List<Location> locations, Map<String, List<Asset>> assetsByParentId, bool isEnergySensorActive, bool isCriticalStatusActive, String searchQuery) {
+  List<Widget> _buildCollapsibleWidgets(WidgetRef ref, List<Location> locations, Map<String, List<Asset>> assetsByParentId, bool filterActive) {
     return locations.map((location) {
       final locationAssets = assetsByParentId['']?.where((asset) => asset.locationId == location.id).toList() ?? [];
-      return locationAssets.isNotEmpty || !isEnergySensorActive && !isCriticalStatusActive && searchQuery.isEmpty
+      return locationAssets.isNotEmpty || !filterActive
           ? CollapsibleWidget(
         title: location.name,
         icon: Icons.location_on,
-        children: _buildAssetWidgets(locationAssets, assetsByParentId, isEnergySensorActive, isCriticalStatusActive, searchQuery),
+        isExpanded: filterActive,
+        disableCollapse: filterActive,
+        children: _buildAssetWidgets(ref, locationAssets, assetsByParentId, filterActive),
       )
           : Container();
     }).toList();
   }
 
-  List<Widget> _buildAssetWidgets(List<Asset> assets, Map<String, List<Asset>> assetsByParentId, bool isEnergySensorActive, bool isCriticalStatusActive, String searchQuery) {
+  List<Widget> _buildAssetWidgets(WidgetRef ref, List<Asset> assets, Map<String, List<Asset>> assetsByParentId, bool filterActive) {
     return assets.map((asset) {
       final assetComponents = assetsByParentId[asset.id] ?? [];
-      return assetComponents.isNotEmpty || assetMatchesFilter(asset, isEnergySensorActive, isCriticalStatusActive, searchQuery) || !isEnergySensorActive && !isCriticalStatusActive && searchQuery.isEmpty
+      return assetComponents.isNotEmpty || assetMatchesFilter(ref, asset, filterActive) || !filterActive
           ? CollapsibleWidget(
         title: asset.name,
         icon: Icons.build,
-        status: asset.status, // Pass status to CollapsibleWidget
-        children: _buildAssetWidgets(assetComponents, assetsByParentId, isEnergySensorActive, isCriticalStatusActive, searchQuery),
+        status: asset.status,
+        isExpanded: filterActive,
+        disableCollapse: filterActive,
+        children: _buildAssetWidgets(ref, assetComponents, assetsByParentId, filterActive),
       )
           : Container();
     }).toList();
   }
 
-  bool assetMatchesFilter(Asset asset, bool isEnergySensorActive, bool isCriticalStatusActive, String searchQuery) {
-    if (isEnergySensorActive && asset.sensorType == 'energy') {
+  bool assetMatchesFilter(WidgetRef ref, Asset asset, bool filterActive) {
+    final searchQuery = ref.read(searchQueryProvider.notifier).state;
+    if (filterActive && asset.sensorType == 'energy') {
       return true;
     }
 
-    if (isCriticalStatusActive && asset.status == 'alert') {
+    if (filterActive && asset.status == 'alert') {
       return true;
     }
 
-    if (searchQuery.isNotEmpty && asset.name.toLowerCase().contains(searchQuery.toLowerCase())) {
+    if (filterActive && searchQuery.isNotEmpty && asset.name.toLowerCase().contains(searchQuery.toLowerCase())) {
       return true;
     }
 
