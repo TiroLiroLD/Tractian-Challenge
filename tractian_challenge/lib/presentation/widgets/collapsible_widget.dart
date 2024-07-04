@@ -1,5 +1,3 @@
-// lib/presentation/widgets/collapsible_widget.dart
-
 import 'package:flutter/material.dart';
 
 class CollapsibleWidget extends StatefulWidget {
@@ -68,72 +66,104 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    return CustomPaint(
+      painter: TreeLinePainter(_isExpanded && widget.children.isNotEmpty),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 16.0), // Indentation for child nodes
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (widget.children.isNotEmpty)
-              IconButton(
-                icon: Icon(
-                  _isExpanded ? Icons.expand_less : Icons.expand_more,
+            Row(
+              children: [
+                if (widget.children.isNotEmpty)
+                  IconButton(
+                    icon: Icon(
+                      _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    ),
+                    onPressed: widget.disableCollapse
+                        ? null
+                        : () {
+                      setState(() {
+                        _isExpanded = !_isExpanded;
+                      });
+                      if (_isExpanded) {
+                        _controller.forward();
+                      } else {
+                        _controller.reverse();
+                      }
+                    },
+                  ),
+                if (widget.children.isEmpty)
+                  const SizedBox(
+                    width: 48,
+                    height: 42,
+                  ),
+                Image.asset(
+                  widget.iconPath,
+                  width: 24,
+                  height: 24,
                 ),
-                onPressed: widget.disableCollapse
-                    ? null
-                    : () {
-                  setState(() {
-                    _isExpanded = !_isExpanded;
-                  });
-                  if (_isExpanded) {
-                    _controller.forward();
-                  } else {
-                    _controller.reverse();
-                  }
-                },
-              ),
-            if (widget.children.isEmpty)
-              const SizedBox(
-                width: 48,
-                height: 42,
-              ),
-            Image.asset(
-              widget.iconPath,
-              width: 24,
-              height: 24,
+                const SizedBox(width: 8),
+                Text(
+                  widget.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (widget.status != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: Icon(
+                      widget.status == 'alert' ? Icons.circle : Icons.bolt_rounded,
+                      color: widget.status == 'alert' ? Colors.red : Colors.green,
+                      size: widget.status == 'alert' ? 12 : null,
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                widget.title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+            SizeTransition(
+              sizeFactor: _animation,
+              axisAlignment: -1.0,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16.0), // Additional indentation for children
+                child: Column(
+                  children: widget.children,
                 ),
               ),
             ),
-            if (widget.status != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: Icon(
-                  widget.status == 'alert'
-                      ? Icons.circle
-                      : Icons.bolt_rounded,
-                  color: widget.status == 'alert'
-                      ? Colors.red
-                      : Colors.green,
-                  size: widget.status == 'alert' ? 12 : null,
-                ),
-              ),
           ],
         ),
-        SizeTransition(
-          sizeFactor: _animation,
-          axisAlignment: -1.0,
-          child: Column(
-            children: widget.children,
-          ),
-        ),
-      ],
+      ),
     );
+  }
+}
+
+class TreeLinePainter extends CustomPainter {
+  final bool drawLines;
+
+  TreeLinePainter(this.drawLines);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!drawLines) return;
+
+    final paint = Paint()
+      ..color = Colors.grey
+      ..strokeWidth = 2;
+
+    // Draw vertical line from the middle of the icon button to the bottom
+    double startX = 24; // Starting X position to align with the icon
+    double iconSize = 24; // Icon size for positioning
+
+    canvas.drawLine(Offset(startX, iconSize / 2), Offset(startX, size.height), paint);
+
+    // Draw horizontal line from the middle to the right
+    canvas.drawLine(Offset(startX, iconSize / 2), Offset(startX + 8, iconSize / 2), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
   }
 }

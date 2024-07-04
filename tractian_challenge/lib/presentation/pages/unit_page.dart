@@ -56,7 +56,7 @@ class _UnitPageState extends ConsumerState<UnitPage> {
               return locationsAsyncValue.when(
                 data: (locations) {
                   _nodes = buildNodeTree(locations, assets);
-                  _rootNodes = _nodes.values.where((node) => node.parentId == null).toList();
+                  _rootNodes = _nodes.values.where((node) => node.parentId == null && node.locationNode).toList();
 
                   _applyFilters(isEnergySensorActive, isCriticalStatusActive, searchQuery);
 
@@ -115,6 +115,7 @@ class _UnitPageState extends ConsumerState<UnitPage> {
         sensorType: null,
         status: null,
         children: [],
+        locationNode: true,
       );
     }
 
@@ -148,7 +149,7 @@ class _UnitPageState extends ConsumerState<UnitPage> {
 
   void updateRenderStatus(Node node, bool isEnergySensorActive, bool isCriticalStatusActive, String query) {
     node.shouldRender = applyAllFilters(node, isEnergySensorActive, isCriticalStatusActive, query);
-    print('Node: ${node.name}, shouldRender: ${node.shouldRender}');
+    print('Node: ${node.name}, shouldRender: ${node.shouldRender}            locationNode: ${node.locationNode}, ');
 
     for (var child in node.children) {
       updateRenderStatus(child, isEnergySensorActive, isCriticalStatusActive, query);
@@ -190,8 +191,10 @@ class _UnitPageState extends ConsumerState<UnitPage> {
     return [
       CollapsibleWidget(
         title: node.name,
-        iconPath: node.sensorType != null ? 'assets/images/icons/component.png' : 'assets/images/icons/location.png',
-        status: node.status,
+        iconPath: node.locationNode ? 'assets/images/icons/location.png' : node
+            .sensorType != null
+            ? 'assets/images/icons/component.png'
+            : 'assets/images/icons/asset.png',        status: node.status,
         isExpanded: true,
         disableCollapse: false,
         children: node.children.where((child) => child.shouldRender).expand(buildTreeView).toList(),

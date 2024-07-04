@@ -14,6 +14,7 @@ class Node {
   final String? status;
   bool shouldRender;
   List<Node> children;
+  bool locationNode;
 
   Node({
     required this.id,
@@ -24,6 +25,7 @@ class Node {
     this.status,
     this.shouldRender = false,
     this.children = const [],
+    this.locationNode = false,
   });
 
   factory Node.fromJson(Map<String, dynamic> json) => _$NodeFromJson(json);
