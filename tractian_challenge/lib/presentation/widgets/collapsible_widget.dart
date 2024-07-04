@@ -4,11 +4,13 @@ class CollapsibleWidget extends StatefulWidget {
   final String title;
   final IconData icon;
   final List<Widget> children;
+  final String? status; // Add status to determine icon color
 
   CollapsibleWidget({
     required this.title,
     required this.icon,
     required this.children,
+    this.status,
   });
 
   @override
@@ -18,8 +20,20 @@ class CollapsibleWidget extends StatefulWidget {
 class _CollapsibleWidgetState extends State<CollapsibleWidget> {
   bool _isExpanded = false;
 
+  Color? _getStatusColor(String? status) {
+    if (status == 'alert') {
+      return Colors.red;
+    } else if (status == 'operating') {
+      return Colors.green;
+    } else {
+      return null; // No color for undefined status
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    Color? statusColor = _getStatusColor(widget.status);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -43,9 +57,25 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> {
             Icon(widget.icon),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                widget.title,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              child: Row(
+                children: [
+                  Text(
+                    widget.title,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  if (statusColor != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
