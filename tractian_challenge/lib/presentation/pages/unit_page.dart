@@ -106,12 +106,16 @@ class _UnitPageState extends State<UnitPage> {
           .toList();
     }
 
+    if (filtered.isEmpty && searchQuery.isNotEmpty) {
+      return [];
+    }
+
     return _retainRelevantAssetPaths(ref, assets, filtered);
   }
 
   List<Asset> _retainRelevantAssetPaths(WidgetRef ref, List<Asset> allAssets, List<Asset> filteredAssets) {
     if (filteredAssets.isEmpty) {
-      return allAssets;
+      return [];
     }
 
     final Set<String> relevantAssetIds = {};
