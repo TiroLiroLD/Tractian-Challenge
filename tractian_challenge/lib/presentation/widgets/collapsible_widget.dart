@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 
 class CollapsibleWidget extends StatefulWidget {
   final String title;
-  final IconData icon;
+  final String iconPath;
   final List<Widget> children;
   final bool isExpanded;
-  final bool disableCollapse;
   final String? status;
+  final bool disableCollapse;
 
   CollapsibleWidget({
     required this.title,
-    required this.icon,
+    required this.iconPath,
     required this.children,
     this.isExpanded = false,
-    this.disableCollapse = false,
     this.status,
+    this.disableCollapse = false,
   });
 
   @override
@@ -63,8 +63,13 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> {
             if (widget.children.isEmpty)
               const SizedBox(
                 width: 48,
+                height: 42,
               ),
-            Icon(widget.icon),
+            Image.asset(
+              widget.iconPath,
+              width: 24,
+              height: 24,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Row(
@@ -86,7 +91,7 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> {
                         color: widget.status == 'alert'
                             ? Colors.red
                             : Colors.green,
-                        size: 12, // Make the icon smaller
+                        size: widget.status == 'alert' ? 12 : null,
                       ),
                     ),
                 ],
@@ -98,7 +103,7 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> {
           Stack(
             children: [
               Positioned(
-                left: 24, // Position the vertical line to the left
+                left: 24,
                 top: 0,
                 bottom: 0,
                 child: Container(

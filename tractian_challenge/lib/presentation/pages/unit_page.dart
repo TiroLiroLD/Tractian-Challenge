@@ -161,7 +161,7 @@ class _UnitPageState extends State<UnitPage> {
       return locationAssets.isNotEmpty || !filterActive
           ? CollapsibleWidget(
         title: location.name,
-        icon: Icons.location_on,
+        iconPath: 'assets/images/icons/location.png',
         isExpanded: filterActive,
         disableCollapse: filterActive,
         children: _buildAssetWidgets(ref, locationAssets, assetsByParentId, filterActive),
@@ -176,7 +176,7 @@ class _UnitPageState extends State<UnitPage> {
       return assetComponents.isNotEmpty || assetMatchesFilter(ref, asset, filterActive) || !filterActive
           ? CollapsibleWidget(
         title: asset.name,
-        icon: Icons.build,
+        iconPath: asset.status != null ? 'assets/images/icons/component.png' : 'assets/images/icons/asset.png',
         status: asset.status,
         isExpanded: filterActive,
         disableCollapse: filterActive,
@@ -187,7 +187,7 @@ class _UnitPageState extends State<UnitPage> {
   }
 
   bool assetMatchesFilter(WidgetRef ref, Asset asset, bool filterActive) {
-    final searchQuery = ref.read(searchQueryProvider.notifier).state;
+    final searchQuery = ref.read(searchQueryProvider);
     if (filterActive && asset.sensorType == 'energy') {
       return true;
     }
