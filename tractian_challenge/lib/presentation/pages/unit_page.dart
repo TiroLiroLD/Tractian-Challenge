@@ -3,10 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tractian_challenge/presentation/widgets/collapsible_widget.dart';
-import 'package:tractian_challenge/presentation/widgets/tree_search_bar.dart';
 import 'package:tractian_challenge/presentation/widgets/filter_buttons.dart';
-import 'package:tractian_challenge/themes/app_colors.dart';
+import 'package:tractian_challenge/presentation/widgets/tree_search_bar.dart';
 import 'package:tractian_challenge/providers.dart';
+import 'package:tractian_challenge/themes/app_colors.dart';
 
 import '../../data/models/node.dart';
 
@@ -41,31 +41,50 @@ class _UnitPageState extends ConsumerState<UnitPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.unitName, style: const TextStyle(color: AppColors.headerText)),
+        leading: IconButton(
+          icon: const Icon(
+            Icons.chevron_left,
+            size: 40,
+          ),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+        title: Text(widget.unitName,
+            style: const TextStyle(color: AppColors.headerText)),
+        centerTitle: true,
       ),
       body: Consumer(
         builder: (context, ref, child) {
           final isEnergySensorActive = ref.watch(energySensorFilterProvider);
-          final isCriticalStatusActive = ref.watch(criticalStatusFilterProvider);
+          final isCriticalStatusActive =
+              ref.watch(criticalStatusFilterProvider);
           final searchQuery = ref.watch(searchQueryProvider);
-          final assetsAsyncValue = ref.watch(assetsProvider(widget.assetFilePath));
-          final locationsAsyncValue = ref.watch(locationsProvider(widget.locationFilePath));
+          final assetsAsyncValue =
+              ref.watch(assetsProvider(widget.assetFilePath));
+          final locationsAsyncValue =
+              ref.watch(locationsProvider(widget.locationFilePath));
 
           return assetsAsyncValue.when(
             data: (assets) {
               return locationsAsyncValue.when(
                 data: (locations) {
                   _nodes = buildNodeTree(locations, assets);
-                  _rootNodes = _nodes.values.where((node) => node.parentId == null && node.locationNode).toList();
+                  _rootNodes = _nodes.values
+                      .where(
+                          (node) => node.parentId == null && node.locationNode)
+                      .toList();
 
-                  _applyFilters(isEnergySensorActive, isCriticalStatusActive, searchQuery);
+                  _applyFilters(isEnergySensorActive, isCriticalStatusActive,
+                      searchQuery);
 
                   return Column(
                     children: [
                       TreeSearchBar(
                         onSearch: (text) {
                           ref.read(searchQueryProvider.notifier).state = text;
-                          _applyFilters(isEnergySensorActive, isCriticalStatusActive, text);
+                          _applyFilters(isEnergySensorActive,
+                              isCriticalStatusActive, text);
                           setState(() {}); // Rebuild the widget tree
                         },
                       ),
@@ -73,16 +92,22 @@ class _UnitPageState extends ConsumerState<UnitPage> {
                         isEnergySensorActive: isEnergySensorActive,
                         isCriticalStatusActive: isCriticalStatusActive,
                         onEnergySensorFilter: () {
-                          ref.read(energySensorFilterProvider.notifier).state = !isEnergySensorActive;
-                          _applyFilters(!isEnergySensorActive, isCriticalStatusActive, searchQuery);
+                          ref.read(energySensorFilterProvider.notifier).state =
+                              !isEnergySensorActive;
+                          _applyFilters(!isEnergySensorActive,
+                              isCriticalStatusActive, searchQuery);
                           setState(() {}); // Rebuild the widget tree
                         },
                         onCriticalStatusFilter: () {
-                          ref.read(criticalStatusFilterProvider.notifier).state = !isCriticalStatusActive;
-                          _applyFilters(isEnergySensorActive, !isCriticalStatusActive, searchQuery);
+                          ref
+                              .read(criticalStatusFilterProvider.notifier)
+                              .state = !isCriticalStatusActive;
+                          _applyFilters(isEnergySensorActive,
+                              !isCriticalStatusActive, searchQuery);
                           setState(() {}); // Rebuild the widget tree
                         },
                       ),
+                      const Divider(color: AppColors.bodyDivider),
                       Expanded(
                         child: ListView(
                           children: _rootNodes.expand(buildTreeView).toList(),
@@ -91,11 +116,11 @@ class _UnitPageState extends ConsumerState<UnitPage> {
                     ],
                   );
                 },
-                loading: () => Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => Center(child: Text('Error: $error')),
               );
             },
-            loading: () => Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stack) => Center(child: Text('Error: $error')),
           );
         },
@@ -141,18 +166,24 @@ class _UnitPageState extends ConsumerState<UnitPage> {
     return nodes;
   }
 
-  void _applyFilters(bool isEnergySensorActive, bool isCriticalStatusActive, String searchQuery) {
+  void _applyFilters(bool isEnergySensorActive, bool isCriticalStatusActive,
+      String searchQuery) {
     _rootNodes.forEach((node) {
-      updateRenderStatus(node, isEnergySensorActive, isCriticalStatusActive, searchQuery);
+      updateRenderStatus(
+          node, isEnergySensorActive, isCriticalStatusActive, searchQuery);
     });
   }
 
-  void updateRenderStatus(Node node, bool isEnergySensorActive, bool isCriticalStatusActive, String query) {
-    node.shouldRender = applyAllFilters(node, isEnergySensorActive, isCriticalStatusActive, query);
-    print('Node: ${node.name}, shouldRender: ${node.shouldRender}            locationNode: ${node.locationNode}, ');
+  void updateRenderStatus(Node node, bool isEnergySensorActive,
+      bool isCriticalStatusActive, String query) {
+    node.shouldRender = applyAllFilters(
+        node, isEnergySensorActive, isCriticalStatusActive, query);
+    print(
+        'Node: ${node.name}, shouldRender: ${node.shouldRender}            locationNode: ${node.locationNode}, ');
 
     for (var child in node.children) {
-      updateRenderStatus(child, isEnergySensorActive, isCriticalStatusActive, query);
+      updateRenderStatus(
+          child, isEnergySensorActive, isCriticalStatusActive, query);
       if (child.shouldRender) {
         node.shouldRender = true;
       }
@@ -161,7 +192,8 @@ class _UnitPageState extends ConsumerState<UnitPage> {
     node.propagateRenderStatus();
   }
 
-  bool applyAllFilters(Node node, bool isEnergySensorActive, bool isCriticalStatusActive, String query) {
+  bool applyAllFilters(Node node, bool isEnergySensorActive,
+      bool isCriticalStatusActive, String query) {
     return searchQueryFilter(node, query) &&
         (!isEnergySensorActive || energySensorFilter(node)) &&
         (!isCriticalStatusActive || criticalStatusFilter(node));
@@ -169,19 +201,22 @@ class _UnitPageState extends ConsumerState<UnitPage> {
 
   bool energySensorFilter(Node node) {
     bool shouldRender = node.sensorType == 'energy';
-    print('energySensorFilter called for node with id: ${node.id}, sensorType: ${node.sensorType}, shouldRender: $shouldRender');
+    print(
+        'energySensorFilter called for node with id: ${node.id}, sensorType: ${node.sensorType}, shouldRender: $shouldRender');
     return shouldRender;
   }
 
   bool criticalStatusFilter(Node node) {
     bool shouldRender = node.status == 'alert';
-    print('criticalStatusFilter called for node with id: ${node.id}, status: ${node.status}, shouldRender: $shouldRender');
+    print(
+        'criticalStatusFilter called for node with id: ${node.id}, status: ${node.status}, shouldRender: $shouldRender');
     return shouldRender;
   }
 
   bool searchQueryFilter(Node node, String query) {
     bool shouldRender = node.name.toLowerCase().contains(query.toLowerCase());
-    print('searchQueryFilter called for node with id: ${node.id}, name: ${node.name}, query: $query, shouldRender: $shouldRender');
+    print(
+        'searchQueryFilter called for node with id: ${node.id}, name: ${node.name}, query: $query, shouldRender: $shouldRender');
     return shouldRender;
   }
 
@@ -191,13 +226,18 @@ class _UnitPageState extends ConsumerState<UnitPage> {
     return [
       CollapsibleWidget(
         title: node.name,
-        iconPath: node.locationNode ? 'assets/images/icons/location.png' : node
-            .sensorType != null
-            ? 'assets/images/icons/component.png'
-            : 'assets/images/icons/asset.png',        status: node.status,
+        iconPath: node.locationNode
+            ? 'assets/images/icons/location.png'
+            : node.sensorType != null
+                ? 'assets/images/icons/component.png'
+                : 'assets/images/icons/asset.png',
+        status: node.status,
         isExpanded: true,
         disableCollapse: false,
-        children: node.children.where((child) => child.shouldRender).expand(buildTreeView).toList(),
+        children: node.children
+            .where((child) => child.shouldRender)
+            .expand(buildTreeView)
+            .toList(),
       )
     ];
   }

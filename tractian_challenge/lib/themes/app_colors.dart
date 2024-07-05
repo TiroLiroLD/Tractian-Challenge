@@ -12,6 +12,7 @@ class AppColors {
   static const Color headerText = Color(0xFFFFFFFF);
 
   static const Color bodyBackground = Color(0xFFFFFFFF);
+  static const Color bodyDivider = Color(0x0F000000);
 
   static const Color searchBoxBackground = Color(0xFFEAEFF3);
   static const Color searchBoxText = Color(0xFF8E98A3);

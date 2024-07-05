@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tractian_challenge/themes/app_colors.dart';
 
 class CollapsibleWidget extends StatefulWidget {
   final String title;
@@ -149,17 +150,17 @@ class TreeLinePainter extends CustomPainter {
     if (!drawLines) return;
 
     final paint = Paint()
-      ..color = Colors.grey
+      ..color = AppColors.bodyDivider
       ..strokeWidth = 2;
 
     // Draw vertical line from the middle of the icon button to the bottom
-    double startX = 24; // Starting X position to align with the icon
+    double startX = 40; // Starting X position to align with the icon
     double iconSize = 24; // Icon size for positioning
 
-    canvas.drawLine(Offset(startX, iconSize / 2), Offset(startX, size.height), paint);
+    canvas.drawLine(Offset(startX, iconSize), Offset(startX, size.height), paint);
 
-    // Draw horizontal line from the middle to the right
-    canvas.drawLine(Offset(startX, iconSize / 2), Offset(startX + 8, iconSize / 2), paint);
+    // Draw horizontal line from the middle to the right at the bottom
+    canvas.drawLine(Offset(startX, size.height), Offset(startX + iconSize/2, size.height), paint);
   }
 
   @override
