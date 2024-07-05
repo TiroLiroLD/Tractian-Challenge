@@ -1,5 +1,3 @@
-// lib/data/services/data_service.dart
-
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import '../models/node.dart';
