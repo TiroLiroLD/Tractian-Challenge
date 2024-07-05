@@ -93,6 +93,7 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> with SingleTicker
                         _controller.reverse();
                       }
                     },
+                    color: widget.disableCollapse ? AppColors.bodyDivider : AppColors.bodyText2,
                   ),
                 if (widget.children.isEmpty)
                   const SizedBox(

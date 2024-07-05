@@ -110,7 +110,12 @@ class _UnitPageState extends ConsumerState<UnitPage> {
                       const Divider(color: AppColors.bodyDivider),
                       Expanded(
                         child: ListView(
-                          children: _rootNodes.expand(buildTreeView).toList(),
+                          children: _rootNodes.expand((node) =>
+                              buildTreeView(
+                                  node,
+                                  isEnergySensorActive ||
+                                      isCriticalStatusActive ||
+                                      searchQuery.isNotEmpty)).toList(),
                         ),
                       ),
                     ],
@@ -178,8 +183,6 @@ class _UnitPageState extends ConsumerState<UnitPage> {
       bool isCriticalStatusActive, String query) {
     node.shouldRender = applyAllFilters(
         node, isEnergySensorActive, isCriticalStatusActive, query);
-    print(
-        'Node: ${node.name}, shouldRender: ${node.shouldRender}            locationNode: ${node.locationNode}, ');
 
     for (var child in node.children) {
       updateRenderStatus(
@@ -201,26 +204,20 @@ class _UnitPageState extends ConsumerState<UnitPage> {
 
   bool energySensorFilter(Node node) {
     bool shouldRender = node.sensorType == 'energy';
-    print(
-        'energySensorFilter called for node with id: ${node.id}, sensorType: ${node.sensorType}, shouldRender: $shouldRender');
     return shouldRender;
   }
 
   bool criticalStatusFilter(Node node) {
     bool shouldRender = node.status == 'alert';
-    print(
-        'criticalStatusFilter called for node with id: ${node.id}, status: ${node.status}, shouldRender: $shouldRender');
     return shouldRender;
   }
 
   bool searchQueryFilter(Node node, String query) {
     bool shouldRender = node.name.toLowerCase().contains(query.toLowerCase());
-    print(
-        'searchQueryFilter called for node with id: ${node.id}, name: ${node.name}, query: $query, shouldRender: $shouldRender');
     return shouldRender;
   }
 
-  List<Widget> buildTreeView(Node node) {
+  List<Widget> buildTreeView(Node node, bool disableCollapse) {
     if (!node.shouldRender) return [];
 
     return [
@@ -232,11 +229,11 @@ class _UnitPageState extends ConsumerState<UnitPage> {
                 ? 'assets/images/icons/component.png'
                 : 'assets/images/icons/asset.png',
         status: node.status,
-        isExpanded: true,
-        disableCollapse: false,
+        isExpanded: false,
+        disableCollapse: disableCollapse,
         children: node.children
             .where((child) => child.shouldRender)
-            .expand(buildTreeView)
+            .expand((child) => buildTreeView(child, disableCollapse))
             .toList(),
       )
     ];
