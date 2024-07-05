@@ -230,7 +230,7 @@ class _UnitPageState extends ConsumerState<UnitPage> {
                 : 'assets/images/icons/asset.png',
         status: node.status,
         isExpanded: false,
-        disableCollapse: disableCollapse,
+        filterActive: disableCollapse,
         children: node.children
             .where((child) => child.shouldRender)
             .expand((child) => buildTreeView(child, disableCollapse))

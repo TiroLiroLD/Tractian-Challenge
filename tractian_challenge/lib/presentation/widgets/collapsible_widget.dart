@@ -6,7 +6,7 @@ class CollapsibleWidget extends StatefulWidget {
   final String iconPath;
   final String? status;
   final bool isExpanded;
-  final bool disableCollapse;
+  final bool filterActive;
   final List<Widget> children;
 
   CollapsibleWidget({
@@ -14,7 +14,7 @@ class CollapsibleWidget extends StatefulWidget {
     required this.iconPath,
     this.status,
     this.isExpanded = false,
-    this.disableCollapse = false,
+    this.filterActive = false,
     required this.children,
   });
 
@@ -47,9 +47,9 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> with SingleTicker
   @override
   void didUpdateWidget(CollapsibleWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.isExpanded != widget.isExpanded) {
+    if (oldWidget.isExpanded != widget.isExpanded || oldWidget.filterActive != widget.filterActive) {
       setState(() {
-        _isExpanded = widget.isExpanded;
+        _isExpanded = widget.isExpanded || widget.filterActive;
       });
       if (_isExpanded) {
         _controller.forward();
@@ -81,7 +81,7 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> with SingleTicker
                     icon: Icon(
                       _isExpanded ? Icons.expand_less : Icons.expand_more,
                     ),
-                    onPressed: widget.disableCollapse
+                    onPressed: widget.filterActive
                         ? null
                         : () {
                       setState(() {
@@ -93,7 +93,7 @@ class _CollapsibleWidgetState extends State<CollapsibleWidget> with SingleTicker
                         _controller.reverse();
                       }
                     },
-                    color: widget.disableCollapse ? AppColors.bodyDivider : AppColors.bodyText2,
+                    color: widget.filterActive ? AppColors.bodyDivider : AppColors.bodyText2,
                   ),
                 if (widget.children.isEmpty)
                   const SizedBox(
